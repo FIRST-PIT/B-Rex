@@ -1,6 +1,5 @@
 package dev.brex.core.geometry;
 
-/** Angle helpers. B-rex stores all angles in radians. */
 public final class Angles {
 
     private static final double TWO_PI = 2 * Math.PI;
@@ -29,3 +28,4 @@ public final class Angles {
         return normalize(from + difference(from, to) * fraction);
     }
 }
+// MATH

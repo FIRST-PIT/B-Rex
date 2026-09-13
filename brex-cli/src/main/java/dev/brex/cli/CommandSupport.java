@@ -1,6 +1,12 @@
 package dev.brex.cli;
 
+import dev.brex.core.config.BrexConfig;
+import dev.brex.core.config.ConfigException;
 import dev.brex.core.format.RunReader;
+import dev.brex.git.Commit;
+import dev.brex.git.Git;
+import java.util.Optional;
+import java.util.function.ToDoubleFunction;
 import dev.brex.core.geometry.DistanceUnit;
 import dev.brex.core.run.Run;
 import dev.brex.core.run.RunMetadata;
@@ -67,6 +73,55 @@ public final class CommandSupport {
         } catch (RuntimeException e) {
             throw new CliException(e.getMessage());
         }
+    }
+
+    /** A distance option such as {@code --start-x 2cm}; the unit is required. */
+    public static double optionMeters(Arguments arguments, String option, double fallback) {
+        return quantity(arguments, option, fallback, c -> c.meters(option, fallback));
+    }
+
+    /** An angle option such as {@code --start-heading 1deg}; the unit is required. */
+    public static double optionRadians(Arguments arguments, String option, double fallback) {
+        return quantity(arguments, option, fallback, c -> c.radians(option, fallback));
+    }
+
+    /** A duration option such as {@code --mechanism-jitter 100ms}; bare numbers are seconds. */
+    public static double optionSeconds(Arguments arguments, String option, double fallback) {
+        return quantity(arguments, option, fallback, c -> c.seconds(option, fallback));
+    }
+
+    private static double quantity(Arguments arguments, String option, double fallback,
+            ToDoubleFunction<BrexConfig> read) {
+        Optional<String> value = arguments.value(option);
+        if (value.isEmpty()) {
+            return fallback;
+        }
+        try {
+            return read.applyAsDouble(BrexConfig.parse(option + "=" + value.get(), "--" + option));
+        } catch (ConfigException e) {
+            throw CliException.usage(e.getMessage());
+        }
+    }
+
+    /**
+     * Resolves {@code --commit}: a Git revision such as {@code HEAD} becomes its full hash when the
+     * working directory is a repository; a hash is accepted as-is otherwise.
+     */
+    public static String resolveCommit(CommandContext context, String revision) {
+        if (revision == null) {
+            return null;
+        }
+        Optional<Git> git = Git.open(context.workingDirectory());
+        Optional<String> resolved = git.flatMap(g -> g.tryResolve(revision)).map(Commit::hash);
+        if (resolved.isPresent()) {
+            return resolved.get();
+        }
+        if (!revision.matches("[0-9a-fA-F]{7,40}")) {
+            throw new CliException(git.isPresent() ? "Unknown Git revision '" + revision + "'"
+                    : "'" + revision + "' is not a commit hash, and " + context.workingDirectory()
+                            + " is not a Git repository");
+        }
+        return revision.toLowerCase(java.util.Locale.ROOT);
     }
 
     public static Map<String, Object> runJson(Run run) {

@@ -1,10 +1,13 @@
 package dev.brex.cli;
 
+import dev.brex.cli.commands.AnalyzeCommand;
 import dev.brex.cli.commands.BaselineCommand;
+import dev.brex.cli.commands.BenchmarkCommand;
 import dev.brex.cli.commands.CompareCommand;
 import dev.brex.cli.commands.InitCommand;
 import dev.brex.cli.commands.ReplayCommand;
 import dev.brex.cli.commands.RunCommand;
+import dev.brex.cli.commands.SimulateCommand;
 import dev.brex.cli.commands.TestCommand;
 import java.util.List;
 
@@ -25,6 +28,9 @@ final class Commands {
                 new TestCommand(),
                 new ReplayCommand(),
                 new CompareCommand(),
+                new AnalyzeCommand(),
+                new BenchmarkCommand(),
+                new SimulateCommand(),
                 new BaselineCommand());
     }
 }

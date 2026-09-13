@@ -27,7 +27,7 @@ public final class Banner {
         "",
     };
 
-    private static final int DINO_WIDTH = 21;
+    private static final int DINO_WIDTH = 21; // DINO :o
 
     private Banner() {
     }

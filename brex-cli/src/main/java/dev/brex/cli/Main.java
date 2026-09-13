@@ -13,3 +13,5 @@ public final class Main {
         System.exit(code);
     }
 }
+
+// :D

@@ -5,6 +5,7 @@ import dev.brex.analysis.compare.OccurrenceMatch;
 import dev.brex.analysis.compare.RunComparison;
 import dev.brex.analysis.compare.TrajectoryComparison;
 import dev.brex.cli.Arguments;
+import dev.brex.cli.CliException;
 import dev.brex.cli.Command;
 import dev.brex.cli.CommandContext;
 import dev.brex.cli.CommandSupport;
@@ -15,12 +16,17 @@ import dev.brex.cli.OptionSpec;
 import dev.brex.cli.Style;
 import dev.brex.core.geometry.DistanceUnit;
 import dev.brex.core.run.Run;
+import dev.brex.git.Commit;
+import dev.brex.git.CommitStats;
+import dev.brex.git.Git;
 import dev.brex.testing.project.BrexProject;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.TreeSet;
 
 /** {@code brex compare}: ghost-run comparison of two runs. */
 public final class CompareCommand implements Command {
@@ -37,7 +43,8 @@ public final class CompareCommand implements Command {
 
     @Override
     public String usage() {
-        return "brex compare <earlier-run> <run> [--samples]";
+        return "brex compare <earlier-run> <run> [--samples]\n"
+                + "       brex compare <revision> <revision>";
     }
 
     @Override
@@ -55,6 +62,12 @@ public final class CompareCommand implements Command {
                   brex compare 41 42
                   brex compare .brex/baselines/blue-left.run.json latest
                   brex compare 41 42 --format json --samples > ghost.json
+
+                When both arguments are Git revisions rather than runs, every routine with runs
+                recorded at either commit is compared: run count, mean duration, reliability and
+                mean score.
+
+                  brex compare HEAD~5 HEAD
                 """;
     }
 
@@ -67,8 +80,22 @@ public final class CompareCommand implements Command {
     public int execute(CommandContext context, Arguments arguments) {
         arguments.requireAtMostPositionals(2);
         BrexProject project = CommandSupport.openProject(context);
-        Run earlier = CommandSupport.resolveRun(context, project, arguments.positional(0, "earlier-run"));
-        Run current = CommandSupport.resolveRun(context, project, arguments.positional(1, "run"));
+        String first = arguments.positional(0, "earlier-run");
+        String second = arguments.positional(1, "run");
+        Run earlier;
+        Run current;
+        try {
+            earlier = CommandSupport.resolveRun(context, project, first);
+            current = CommandSupport.resolveRun(context, project, second);
+        } catch (CliException runError) {
+            Optional<Git> git = Git.open(context.workingDirectory());
+            Optional<Commit> a = git.flatMap(g -> g.tryResolve(first));
+            Optional<Commit> b = git.flatMap(g -> g.tryResolve(second));
+            if (a.isPresent() && b.isPresent()) {
+                return compareCommits(context, project, first, a.get(), second, b.get());
+            }
+            throw runError;
+        }
         if (!earlier.name().equals(current.name())) {
             context.err().println(context.style().yellow("warning: ") + "comparing runs of different routines ("
                     + earlier.name() + " vs " + current.name() + ")");
@@ -138,6 +165,96 @@ public final class CompareCommand implements Command {
             }
             out.println(line);
         }
+    }
+
+    private static int compareCommits(CommandContext context, BrexProject project, String revA, Commit a,
+            String revB, Commit b) {
+        if (!project.isInitialized()) {
+            throw new CliException("Not a B-rex project: no brex.properties or .brex directory. Run 'brex init' first.");
+        }
+        List<Run> runs = project.runs().runs();
+        TreeSet<String> routines = new TreeSet<>();
+        for (Run run : runs) {
+            if (a.matches(run.metadata().gitCommit()) || b.matches(run.metadata().gitCommit())) {
+                routines.add(run.name());
+            }
+        }
+        if (routines.isEmpty()) {
+            throw new CliException("No runs recorded at " + a.shortHash() + " or " + b.shortHash() + ". Runs know "
+                    + "their commit when recorded with gitCommit(...) or imported with "
+                    + "'brex run import --commit <revision>'.");
+        }
+        List<CommitStats[]> stats = new ArrayList<>();
+        for (String routine : routines) {
+            Run baseline = project.baseline(routine).orElse(null);
+            stats.add(new CommitStats[] {
+                CommitStats.of(routine, a, CommitStats.runsAt(a, routine, runs), baseline,
+                        project.scoringConfig(routine), project.idleStates()),
+                CommitStats.of(routine, b, CommitStats.runsAt(b, routine, runs), baseline,
+                        project.scoringConfig(routine), project.idleStates())});
+        }
+        if (context.json()) {
+            Map<String, Object> root = JsonReports.envelope("compare commits");
+            root.put("earlier", commitJson(revA, a));
+            root.put("current", commitJson(revB, b));
+            List<Object> list = new ArrayList<>();
+            for (CommitStats[] pair : stats) {
+                Map<String, Object> m = new LinkedHashMap<>();
+                m.put("routine", pair[0].routine());
+                m.put("earlier", statsJson(pair[0]));
+                m.put("current", statsJson(pair[1]));
+                list.add(m);
+            }
+            root.put("routines", list);
+            context.out().println(JsonReports.write(root));
+            return ExitCode.OK;
+        }
+        PrintStream out = context.out();
+        Style style = context.style();
+        out.println(style.bold(a.shortHash()) + "  " + Fmt.pad(revA, 8) + " " + a.subject());
+        out.println(style.bold(b.shortHash()) + "  " + Fmt.pad(revB, 8) + " " + b.subject());
+        for (CommitStats[] pair : stats) {
+            CommitStats x = pair[0];
+            CommitStats y = pair[1];
+            out.println();
+            out.println(style.bold(Fmt.pad(x.routine(), 20)) + Fmt.padLeft(a.shortHash(), 10)
+                    + Fmt.padLeft(b.shortHash(), 11) + Fmt.padLeft("change", 11));
+            commitRow(out, "Runs", Integer.toString(x.runs()), Integer.toString(y.runs()), "");
+            commitRow(out, "Duration", Fmt.seconds(x.meanDuration()), Fmt.seconds(y.meanDuration()),
+                    change(x.meanDuration(), y.meanDuration(), "%+.2fs"));
+            commitRow(out, "Reliability", Fmt.percent(x.reliability()), Fmt.percent(y.reliability()),
+                    change(x.reliability(), y.reliability(), "%+.1f%%"));
+            commitRow(out, "Score", Fmt.score(x.meanScore()), Fmt.score(y.meanScore()),
+                    change(x.meanScore(), y.meanScore(), "%+.1f"));
+        }
+        return ExitCode.OK;
+    }
+
+    private static void commitRow(PrintStream out, String label, String earlier, String current, String change) {
+        out.println("  " + Fmt.pad(label, 18) + Fmt.padLeft(earlier, 10) + Fmt.padLeft(current, 11)
+                + Fmt.padLeft(change, 11));
+    }
+
+    private static String change(double earlier, double current, String pattern) {
+        return Double.isNaN(earlier) || Double.isNaN(current) ? ""
+                : String.format(java.util.Locale.ROOT, pattern, current - earlier);
+    }
+
+    private static Map<String, Object> commitJson(String revision, Commit commit) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("revision", revision);
+        m.put("hash", commit.hash());
+        m.put("subject", commit.subject());
+        return m;
+    }
+
+    private static Map<String, Object> statsJson(CommitStats s) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("runs", s.runs());
+        m.put("meanDuration", s.meanDuration());
+        m.put("reliability", s.reliability());
+        m.put("meanScore", s.meanScore());
+        return m;
     }
 
     private static void row(PrintStream out, String label, String value, String detail) {

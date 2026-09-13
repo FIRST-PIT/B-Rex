@@ -78,7 +78,7 @@ public final class RunCommand implements Command {
     public List<OptionSpec> options() {
         return List.of(
                 OptionSpec.value("limit", "N", "Show at most N runs (default 20)"),
-                OptionSpec.value("commit", "hash", "Stamp imported runs with this Git commit"),
+                OptionSpec.value("commit", "revision", "Stamp imported runs with a Git commit (hash, or e.g. HEAD)"),
                 OptionSpec.value("device-dir", "dir", "Run directory on the robot (default "
                         + RunStore.ROBOT_DIRECTORY.getPath() + ")"),
                 OptionSpec.value("adb", "path", "adb executable (default: $ADB, Android SDK, or adb on PATH)"));
@@ -193,11 +193,13 @@ public final class RunCommand implements Command {
                 throw new CliException("No such file or directory: " + resolved);
             }
         }
-        return importFiles(context, project, files, arguments.value("commit").orElse(null));
+        return importFiles(context, project, files,
+                CommandSupport.resolveCommit(context, arguments.value("commit").orElse(null)));
     }
 
     private int pull(CommandContext context, Arguments arguments, BrexProject project) throws Exception {
         arguments.requireAtMostPositionals(1);
+        String commit = CommandSupport.resolveCommit(context, arguments.value("commit").orElse(null));
         String adb = arguments.value("adb").orElseGet(() -> locateAdb(context.env()));
         String deviceDir = arguments.value("device-dir").orElse(RunStore.ROBOT_DIRECTORY.getPath());
         Path staging = project.root().resolve(BrexProject.DATA_DIRECTORY).resolve("pull");
@@ -217,7 +219,7 @@ public final class RunCommand implements Command {
                         + "Is the robot connected? Check with 'adb devices'; over Wi-Fi, run "
                         + "'adb connect 192.168.43.1:5555' first.");
             }
-            return importFiles(context, project, runFiles(staging), arguments.value("commit").orElse(null));
+            return importFiles(context, project, runFiles(staging), commit);
         } finally {
             deleteRecursively(staging);
         }
