@@ -1,6 +1,7 @@
 package dev.brex.cli;
 
 import dev.brex.cli.commands.BaselineCommand;
+import dev.brex.cli.commands.CompareCommand;
 import dev.brex.cli.commands.InitCommand;
 import dev.brex.cli.commands.ReplayCommand;
 import dev.brex.cli.commands.RunCommand;
@@ -23,6 +24,7 @@ final class Commands {
                 new RunCommand(processes),
                 new TestCommand(),
                 new ReplayCommand(),
+                new CompareCommand(),
                 new BaselineCommand());
     }
 }
