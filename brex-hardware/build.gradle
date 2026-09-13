@@ -1,0 +1,10 @@
+plugins {
+    id 'brex.robot-library'
+}
+
+description = 'B-rex hardware: hardware-in-the-loop abstractions, telemetry sampling, fakes and pit tests.'
+
+dependencies {
+    api project(':brex-core')
+    api project(':brex-recording')
+}
