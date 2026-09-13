@@ -1,0 +1,9 @@
+plugins {
+    id 'brex.desktop-library'
+}
+
+description = 'B-rex replay: chronological inspection of recorded runs, timelines and ghost runs.'
+
+dependencies {
+    api project(':brex-core')
+}
