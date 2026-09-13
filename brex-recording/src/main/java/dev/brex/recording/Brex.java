@@ -1,10 +1,14 @@
 package dev.brex.recording;
 
+import dev.brex.core.run.Run;
 import dev.brex.core.run.RunKind;
 import dev.brex.core.run.RunMetadata;
 import dev.brex.core.run.RunSource;
 import dev.brex.core.time.Clock;
 import dev.brex.core.time.SystemClock;
+import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
@@ -35,14 +39,23 @@ public final class Brex {
     private Brex() {
     }
 
-    /** Starts recording an autonomous routine with default settings. */
+    /**
+     * Starts recording an autonomous routine with default settings. On a robot controller (when
+     * {@code /sdcard/FIRST} exists) the run is saved to {@link RunStore#ROBOT_DIRECTORY} when it
+     * stops.
+     */
     public static RunRecorder start(String name) {
-        return builder(name).start();
+        return withRobotDefaults(builder(name)).start();
     }
 
     /** Starts recording a full match; use {@link RunRecorder#phase(String)} to mark periods. */
     public static RunRecorder startMatch(String label) {
-        return builder(label).kind(RunKind.MATCH).start();
+        return withRobotDefaults(builder(label).kind(RunKind.MATCH)).start();
+    }
+
+    private static Builder withRobotDefaults(Builder builder) {
+        File first = RunStore.ROBOT_DIRECTORY.getParentFile().getParentFile();
+        return first != null && first.isDirectory() ? builder.saveTo(RunStore.onRobot()) : builder;
     }
 
     public static Builder builder(String name) {
@@ -69,7 +82,7 @@ public final class Brex {
         private Long startedAtEpochMillis;
         private Random random;
         private int maxSamplesPerChannel = DEFAULT_MAX_SAMPLES_PER_CHANNEL;
-        private RunRecorder.StopListener stopListener;
+        private final List<RunRecorder.StopListener> stopListeners = new ArrayList<>();
 
         private Builder(String name) {
             this.metadata = RunMetadata.builder(name);
@@ -157,18 +170,28 @@ public final class Brex {
             return this;
         }
 
-        /** Called with the finished run when recording stops, for example to save it. */
+        /** Called with the finished run when recording stops. May be called repeatedly to add listeners. */
         public Builder onStop(RunRecorder.StopListener listener) {
-            this.stopListener = listener;
+            this.stopListeners.add(listener);
             return this;
+        }
+
+        /** Saves the run to {@code store} when recording stops. Save failures never throw. */
+        public Builder saveTo(final RunStore store) {
+            return onStop(new RunRecorder.StopListener() {
+                @Override
+                public void onStop(Run run) {
+                    store.saveQuietly(run);
+                }
+            });
         }
 
         public RunRecorder start() {
             long started = startedAtEpochMillis != null ? startedAtEpochMillis : System.currentTimeMillis();
             RunRecorder recorder = new RunRecorder(metadata, clock, started,
                     random != null ? random : new Random(), maxSamplesPerChannel);
-            if (stopListener != null) {
-                recorder.addStopListener(stopListener);
+            for (RunRecorder.StopListener listener : stopListeners) {
+                recorder.addStopListener(listener);
             }
             setCurrent(recorder);
             return recorder;
