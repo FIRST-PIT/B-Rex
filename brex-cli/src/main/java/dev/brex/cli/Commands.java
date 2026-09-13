@@ -2,6 +2,7 @@ package dev.brex.cli;
 
 import dev.brex.cli.commands.BaselineCommand;
 import dev.brex.cli.commands.InitCommand;
+import dev.brex.cli.commands.ReplayCommand;
 import dev.brex.cli.commands.RunCommand;
 import dev.brex.cli.commands.TestCommand;
 import java.util.List;
@@ -21,6 +22,7 @@ final class Commands {
                 new InitCommand(),
                 new RunCommand(processes),
                 new TestCommand(),
+                new ReplayCommand(),
                 new BaselineCommand());
     }
 }
