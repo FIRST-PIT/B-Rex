@@ -95,6 +95,19 @@ class RegressionDetectorTest {
     }
 
     @Test
+    void finalMechanismStateDoesNotCountAsSlowdown() {
+        // The lift ends the routine RAISING; the candidate simply records for longer.
+        Run.Builder base = Run.builder("41", baseline.metadata()).duration(10)
+                .mechanismState(MechanismStateChange.of(5, "lift", "RAISING"));
+        Run.Builder longer = Run.builder("42", baseline.metadata()).duration(12)
+                .mechanismState(MechanismStateChange.of(5, "lift", "RAISING"));
+
+        RegressionCheck check = detector.detect(base.build(), longer.build()).check("mechanisms.timing");
+
+        assertEquals(RegressionCheck.Status.SKIP, check.status());
+    }
+
+    @Test
     void detectsWorseLocalization() {
         Run base = baseline.toBuilder().telemetry(localizationError(0.01)).build();
         Run worse = TestRuns.cycle("42", 1.0, 0).telemetry(localizationError(0.031)).build();

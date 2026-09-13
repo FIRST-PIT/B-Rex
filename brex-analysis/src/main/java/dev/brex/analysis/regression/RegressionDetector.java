@@ -147,12 +147,12 @@ public final class RegressionDetector {
     }
 
     /**
-     * Compares how long each mechanism stayed in each active (non-idle) state occurrence. Unlike
-     * event timing, this is not affected by delays earlier in the routine.
+     * Compares how long each mechanism stayed in each completed, active (non-idle) state
+     * occurrence. Unlike event timing, this is not affected by delays earlier in the routine.
      */
     private RegressionCheck mechanismTiming(Run baseline, Run candidate) {
-        Map<String, List<Double>> base = MechanismDurations.of(baseline, state -> !idleStates.isIdle(state));
-        Map<String, List<Double>> current = MechanismDurations.of(candidate, state -> !idleStates.isIdle(state));
+        Map<String, List<Double>> base = MechanismDurations.completed(baseline, state -> !idleStates.isIdle(state));
+        Map<String, List<Double>> current = MechanismDurations.completed(candidate, state -> !idleStates.isIdle(state));
         String worstKey = null;
         int worstOccurrence = 0;
         double worstBase = Double.NaN;

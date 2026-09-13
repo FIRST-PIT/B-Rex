@@ -15,24 +15,33 @@ public final class MechanismDurations {
     }
 
     /**
-     * Durations keyed by {@code mechanism:STATE}, one entry per occurrence in chronological order.
-     * The last state of each mechanism lasts until the end of the run.
+     * Durations of every state occurrence, keyed by {@code mechanism:STATE}, in chronological
+     * order. The last state of each mechanism is measured until the end of the run.
      */
     public static Map<String, List<Double>> of(Run run) {
-        return of(run, state -> true);
+        return collect(run, state -> true, true);
     }
 
-    /** Like {@link #of(Run)}, keeping only states accepted by {@code includeState}. */
-    public static Map<String, List<Double>> of(Run run, Predicate<String> includeState) {
+    /**
+     * Durations of state occurrences that ended with a later state change, keyed by
+     * {@code mechanism:STATE}. The final state of each mechanism is excluded because its length
+     * depends on when recording stopped, not on the mechanism. Use this when comparing runs.
+     */
+    public static Map<String, List<Double>> completed(Run run, Predicate<String> includeState) {
+        return collect(run, includeState, false);
+    }
+
+    private static Map<String, List<Double>> collect(Run run, Predicate<String> includeState, boolean includeFinal) {
         Map<String, List<Double>> result = new LinkedHashMap<>();
         for (String mechanism : run.mechanismNames()) {
             List<MechanismStateChange> changes = run.mechanismStates(mechanism);
             for (int i = 0; i < changes.size(); i++) {
                 MechanismStateChange change = changes.get(i);
-                if (!includeState.test(change.state())) {
+                boolean last = i + 1 == changes.size();
+                if ((last && !includeFinal) || !includeState.test(change.state())) {
                     continue;
                 }
-                double end = i + 1 < changes.size() ? changes.get(i + 1).time() : run.duration();
+                double end = last ? run.duration() : changes.get(i + 1).time();
                 result.computeIfAbsent(mechanism + ":" + change.state(), k -> new ArrayList<>())
                         .add(Math.max(0, end - change.time()));
             }

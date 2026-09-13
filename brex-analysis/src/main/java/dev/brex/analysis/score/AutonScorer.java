@@ -152,8 +152,9 @@ public final class AutonScorer {
             parts.add(orderScore(matched));
             details.add(matched.size() + "/" + expected.size() + " events");
         }
-        Map<String, List<Double>> base = MechanismDurations.of(comparison.baseline(), s -> !idleStates.isIdle(s));
-        Map<String, List<Double>> current = MechanismDurations.of(comparison.candidate(), s -> !idleStates.isIdle(s));
+        Map<String, List<Double>> base = MechanismDurations.completed(comparison.baseline(), s -> !idleStates.isIdle(s));
+        Map<String, List<Double>> current = MechanismDurations.completed(comparison.candidate(),
+                s -> !idleStates.isIdle(s));
         List<Double> timing = new ArrayList<>();
         double worst = 0;
         for (Map.Entry<String, List<Double>> entry : base.entrySet()) {
