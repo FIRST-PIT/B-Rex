@@ -14,5 +14,6 @@ include 'brex-hardware'
 // Desktop modules: Java 17.
 include 'brex-analysis'
 include 'brex-replay'
+include 'brex-sim'
 include 'brex-testing'
 include 'brex-cli'

@@ -1,0 +1,10 @@
+plugins {
+    id 'brex.desktop-library'
+}
+
+description = 'B-rex simulation: deterministic, parameterized re-execution of autonomous routines.'
+
+dependencies {
+    api project(':brex-core')
+    api project(':brex-analysis')
+}
