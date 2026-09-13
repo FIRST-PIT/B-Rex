@@ -1,0 +1,10 @@
+plugins {
+    id 'brex.desktop-library'
+}
+
+description = 'B-rex Git integration: resolve revisions and associate runs with commits. Git is optional.'
+
+dependencies {
+    api project(':brex-core')
+    api project(':brex-analysis')
+}
