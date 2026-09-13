@@ -1,0 +1,34 @@
+// Shared conventions for every B-rex module.
+plugins {
+    id 'java-library'
+}
+
+dependencies {
+    testImplementation platform('org.junit:junit-bom:5.11.4')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.compilerArgs += ['-Xlint:all', '-Xlint:-options', '-Xlint:-serial', '-Xlint:-processing']
+}
+
+// Tests always run on the desktop, so they may use modern Java regardless of the main target.
+tasks.named('compileTestJava') {
+    options.release = 17
+}
+
+tasks.withType(Test).configureEach {
+    useJUnitPlatform()
+    testLogging {
+        events 'failed'
+        exceptionFormat 'full'
+    }
+}
+
+tasks.withType(Jar).configureEach {
+    manifest {
+        attributes('Implementation-Title': project.name, 'Implementation-Version': project.version)
+    }
+}

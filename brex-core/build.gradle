@@ -1,0 +1,12 @@
+plugins {
+    id 'brex.robot-library'
+}
+
+description = 'B-rex core: run model, telemetry, events, configuration and the versioned run format.'
+
+tasks.named('processResources') {
+    inputs.property('version', project.version)
+    filesMatching('**/brex-version.properties') {
+        expand(version: project.version)
+    }
+}

@@ -1,0 +1,10 @@
+// Modules that run on the robot controller. FTC robot code is compiled at Java 8 language
+// level and the REV Control Hub runs Android 7.1 (API 25), so these modules must stay within
+// that envelope.
+plugins {
+    id 'brex.java-conventions'
+}
+
+tasks.named('compileJava') {
+    options.release = 8
+}
