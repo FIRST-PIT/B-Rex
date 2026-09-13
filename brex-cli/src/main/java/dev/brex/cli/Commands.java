@@ -1,5 +1,6 @@
 package dev.brex.cli;
 
+import dev.brex.cli.commands.BaselineCommand;
 import dev.brex.cli.commands.InitCommand;
 import dev.brex.cli.commands.RunCommand;
 import java.util.List;
@@ -17,6 +18,7 @@ final class Commands {
     static List<Command> all(ProcessRunner processes) {
         return List.of(
                 new InitCommand(),
-                new RunCommand(processes));
+                new RunCommand(processes),
+                new BaselineCommand());
     }
 }
