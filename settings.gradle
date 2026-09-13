@@ -8,3 +8,4 @@ dependencyResolutionManagement {
 
 // Robot-side modules: compiled for Java 8 / Android API 25 (REV Control Hub).
 include 'brex-core'
+include 'brex-recording'

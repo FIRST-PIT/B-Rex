@@ -1,0 +1,9 @@
+plugins {
+    id 'brex.robot-library'
+}
+
+description = 'B-rex recording: run, telemetry and trajectory recorders plus run persistence.'
+
+dependencies {
+    api project(':brex-core')
+}
