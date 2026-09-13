@@ -1,0 +1,19 @@
+plugins {
+    id 'brex.desktop-library'
+    id 'application'
+}
+
+description = 'The brex command-line interface.'
+
+dependencies {
+    implementation project(':brex-core')
+    implementation project(':brex-recording')
+    implementation project(':brex-analysis')
+    implementation project(':brex-replay')
+    implementation project(':brex-testing')
+}
+
+application {
+    mainClass = 'dev.brex.cli.Main'
+    applicationName = 'brex'
+}
