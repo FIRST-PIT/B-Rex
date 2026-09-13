@@ -1,0 +1,9 @@
+plugins {
+    id 'brex.desktop-library'
+}
+
+description = 'B-rex analysis: run comparison, regression detection, scoring and timing analysis.'
+
+dependencies {
+    api project(':brex-core')
+}
