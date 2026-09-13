@@ -13,3 +13,4 @@ include 'brex-recording'
 // Desktop modules: Java 17.
 include 'brex-analysis'
 include 'brex-replay'
+include 'brex-testing'

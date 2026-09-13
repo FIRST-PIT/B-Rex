@@ -1,0 +1,11 @@
+plugins {
+    id 'brex.desktop-library'
+}
+
+description = 'B-rex testing: autonomous assertions, regression baselines, benchmarks and Monte Carlo testing.'
+
+dependencies {
+    api project(':brex-core')
+    api project(':brex-recording')
+    api project(':brex-analysis')
+}
