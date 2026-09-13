@@ -8,4 +8,5 @@ dependencies {
     api project(':brex-core')
     api project(':brex-recording')
     api project(':brex-analysis')
+    api project(':brex-sim')
 }
